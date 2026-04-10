@@ -7,7 +7,7 @@ export function useTodos() {
     queryKey: ["todos"],
     queryFn: async (): Promise<Todo[]> => {
       const response = await fetch("/api/todos", {
-        credentials: "include", // ✅ Send cookies
+        credentials: "include", 
       });
       if (!response.ok) {
         throw new Error("Failed to fetch todos");
@@ -48,7 +48,7 @@ export function useUpdateTodo() {
     mutationFn: async ({ id, data }: { id: string; data: Partial<Todo> }) => {
       const response = await fetch(`/api/todos/${id}`, {
         method: "PUT",
-        credentials: "include", // ✅
+        credentials: "include", 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
