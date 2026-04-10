@@ -28,8 +28,13 @@ export function useTaskBreakdown() {
       }
       const data = await response.json()
       setBreakdown(data)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) { // Replaced `any` with `unknown`
+      // Type-safe error checking
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("An unexpected error occurred.")
+      }
     } finally {
       setIsLoading(false)
     }

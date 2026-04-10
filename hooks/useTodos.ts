@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { Todo } from "@/app/generated/prisma"
 
+// Shared payload interfaces for create and update operations
+export type CreateTodoPayload = Omit<Todo, "id" | "createdAt" | "updatedAt" | "userId">;
+export type UpdateTodoPayload = Partial<CreateTodoPayload>;
+
 export function useTodos() {
   return useQuery({
     queryKey: ["todos"],
@@ -16,12 +20,12 @@ export function useTodos() {
   });
 }
 
-
 export function useCreateTodo() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (todoData: any) => {
+    // Removed `any` and replaced with the new shared payload interface
+    mutationFn: async (todoData: CreateTodoPayload) => {
       const response = await fetch("/api/todos", {
         method: "POST",
         credentials: "include", // ✅
@@ -39,12 +43,12 @@ export function useCreateTodo() {
   });
 }
 
-
 export function useUpdateTodo() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Todo> }) => {
+    // Replaced Partial<Todo> with UpdateTodoPayload to prevent patching read-only fields
+    mutationFn: async ({ id, data }: { id: string; data: UpdateTodoPayload }) => {
       const response = await fetch(`/api/todos/${id}`, {
         method: "PUT",
         credentials: "include", // ✅
@@ -61,7 +65,6 @@ export function useUpdateTodo() {
     },
   });
 }
-
 
 export function useDeleteTodo() {
   const queryClient = useQueryClient();
@@ -87,7 +90,8 @@ export function useCreateMultipleTodos() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (newTodos: Omit<Todo, "id" | "createdAt" | "updatedAt" | "userId">[]) => {
+    // Simplified using the newly created shared payload interface
+    mutationFn: async (newTodos: CreateTodoPayload[]) => {
       const response = await fetch(`/api/todos/bulk`, {
         method: "POST",
         credentials: "include", // ✅
@@ -104,4 +108,3 @@ export function useCreateMultipleTodos() {
     },
   });
 }
-
