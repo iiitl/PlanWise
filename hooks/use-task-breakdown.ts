@@ -28,8 +28,13 @@ export function useTaskBreakdown() {
       }
       const data = await response.json()
       setBreakdown(data)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+        if (err instanceof Error) {
+        setError(err.message)
+  } else {
+    setError("Something went wrong")
+  }
+
     } finally {
       setIsLoading(false)
     }

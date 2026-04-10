@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { Todo } from "@/app/generated/prisma"
+import { CreateTodoPayload } from "../types/todo";
 
 export function useTodos() {
   return useQuery({
@@ -21,7 +22,7 @@ export function useCreateTodo() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (todoData: any) => {
+    mutationFn: async (todoData: CreateTodoPayload)=> {
       const response = await fetch("/api/todos", {
         method: "POST",
         credentials: "include", // ✅
