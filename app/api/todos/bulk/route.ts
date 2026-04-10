@@ -26,117 +26,124 @@ const BulkUpdateSchema = z.object({
   }),
 });
 
-// POST /api/todos/bulk - Create multiple new todos for the authenticated user
+// POST /api/todos/bulk
 export async function POST(request: NextRequest) {
   console.log("\n--- [POST /api/todos/bulk] Handler Triggered ---");
 
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET,
+  });
+
+  if (!token?.sub) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body;
+
+  // ✅ Handle malformed JSON
   try {
-    console.log("Incoming request headers:", request.headers);
-    console.log("Value of process.env.AUTH_SECRET:", process.env.AUTH_SECRET);
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON format" },
+      { status: 400 }
+    );
+  }
 
-    // Get the JWT token from the request, explicitly providing the secret
-    const token = await getToken({
-      req: request,
-      secret: process.env.AUTH_SECRET, // Ensure the secret is explicitly provided
-    });
-
-    console.log("Token object returned by getToken:", token);
-
-    // Check if the token exists and has a 'sub' (subject/user ID)
-    if (!token?.sub) { // Changed from token?.id to token?.sub for consistency
-      console.error("Validation failed: Token is null or missing `sub`. Responding with 401.");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    console.log(`Validation successful. User ID from token: ${token.sub}`);
-
-    // Parse the request body. The client sends { todos: [...] }
-    const body = await request.json();
-    console.log("Received raw body for bulk create:", body);
-
-    // Extract the 'todos' array from the received body object
+  try {
     const todosArray = body.todos;
 
-    // Validate the extracted array using the BulkCreateSchema
     const parsedBody = BulkCreateSchema.safeParse(todosArray);
 
-    // If validation fails, return a 400 error with issues
+    // ✅ Standard validation response
     if (!parsedBody.success) {
-      console.error("Invalid data for bulk create:", parsedBody.error.issues);
-      return NextResponse.json({ error: "Invalid data", issues: parsedBody.error.issues }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsedBody.error.issues,
+        },
+        { status: 400 }
+      );
     }
 
-    // Create multiple todos in the database
     const todos = await prisma.todo.createMany({
       data: parsedBody.data.map((todo) => ({
         ...todo,
-        userId: token.sub as string, // Ensure userId is from token.sub
+        userId: token.sub as string,
       })),
     });
 
-    console.log("Bulk create result:", todos);
     return NextResponse.json(todos, { status: 201 });
+
   } catch (error) {
-    console.error("An unexpected error occurred in POST /api/todos/bulk (Bulk create error):", error);
-    return NextResponse.json({ error: "Failed to create todos" }, { status: 500 });
+    console.error("Bulk create error:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
 
-// PUT /api/todos/bulk - Update multiple todos for the authenticated user
+// PUT /api/todos/bulk
 export async function PUT(request: NextRequest) {
   console.log("\n--- [PUT /api/todos/bulk] Handler Triggered ---");
 
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET,
+  });
+
+  if (!token?.sub) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body;
+
+  // ✅ Handle malformed JSON
   try {
-    console.log("Incoming request headers:", request.headers);
-    console.log("Value of process.env.AUTH_SECRET:", process.env.AUTH_SECRET);
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON format" },
+      { status: 400 }
+    );
+  }
 
-    // Get the JWT token from the request, explicitly providing the secret
-    const token = await getToken({
-      req: request,
-      secret: process.env.AUTH_SECRET, // Ensure the secret is explicitly provided
-    });
-
-    console.log("Token object returned by getToken:", token);
-
-    // Check if the token exists and has a 'sub' (subject/user ID)
-    if (!token?.sub) { // Changed from token?.id to token?.sub for consistency
-      console.error("Validation failed: Token is null or missing `sub`. Responding with 401.");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    console.log(`Validation successful. User ID from token: ${token.sub}`);
-
-    // Parse the request body using the Zod schema for bulk update
-    const body = await request.json();
-    console.log("Received body for bulk update:", body);
+  try {
     const parsedBody = BulkUpdateSchema.safeParse(body);
 
-    // If validation fails, return a 400 error with issues
+    // ✅ Standard validation response
     if (!parsedBody.success) {
-      console.error("Invalid data for bulk update:", parsedBody.error.issues);
-      return NextResponse.json({ error: "Invalid data", issues: parsedBody.error.issues }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: parsedBody.error.issues,
+        },
+        { status: 400 }
+      );
     }
 
     const { todoIds, updates } = parsedBody.data;
-    console.log(`Attempting to bulk update todos with IDs: ${todoIds.join(', ')} for user: ${token.sub}`);
 
-    // Perform the bulk update in the database
     const result = await prisma.todo.updateMany({
       where: {
         id: { in: todoIds },
-        userId: token.sub as string, // Ensure todos belong to the authenticated user
+        userId: token.sub as string,
       },
       data: {
         ...updates,
-        // Set completedAt if isCompleted is true, otherwise null
         completedAt: updates.isCompleted ? new Date() : null,
       },
     });
 
-    console.log("Bulk update result:", result);
     return NextResponse.json(result);
+
   } catch (error) {
-    console.error("An unexpected error occurred in PUT /api/todos/bulk (Bulk update error):", error);
-    return NextResponse.json({ error: "Failed to update todos" }, { status: 500 });
+    console.error("Bulk update error:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

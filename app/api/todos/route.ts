@@ -15,6 +15,7 @@ const TodoSchema = z.object({
 // GET /api/todos - Get all todos for the authenticated user
 export async function GET(request: NextRequest) {
   console.log("\n--- [GET /api/todos] Handler Triggered ---");
+  console.log("TODOS API HIT");
 
   try {
     console.log("Incoming request headers:", request.headers);
@@ -50,25 +51,73 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/todos - Create a new todo for the authenticated user
+// export async function POST(request: NextRequest) {
+//   try {
+//     const token = await getToken({
+//       req: request,
+//       secret: process.env.AUTH_SECRET,
+//     });
+
+//     if (!token?.sub) {
+//       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+//     }
+
+//     const body = await request.json();
+//     const parsedBody = TodoSchema.safeParse(body);
+
+//     if (!parsedBody.success) {
+//       return NextResponse.json({
+//         error: "Invalid data",
+//         issues: parsedBody.error.issues,
+//       }, { status: 400 });
+//     }
+
+//     const todo = await prisma.todo.create({
+//       data: {
+//         ...parsedBody.data,
+//         userId: token.sub,
+//       },
+//     });
+
+//     return NextResponse.json(todo, { status: 201 });
+//   } catch (error) {
+//     console.error("Error creating todo:", error);
+//     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+//   }
+// }
+
 export async function POST(request: NextRequest) {
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET,
+  });
+
+  if (!token?.sub) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body;
+
   try {
-    const token = await getToken({
-      req: request,
-      secret: process.env.AUTH_SECRET,
-    });
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON format" },
+      { status: 400 }
+    );
+  }
 
-    if (!token?.sub) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
+  try {
     const parsedBody = TodoSchema.safeParse(body);
 
     if (!parsedBody.success) {
-      return NextResponse.json({
-        error: "Invalid data",
-        issues: parsedBody.error.issues,
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Invalid data",
+          issues: parsedBody.error.issues,
+        },
+        { status: 400 }
+      );
     }
 
     const todo = await prisma.todo.create({
@@ -79,8 +128,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(todo, { status: 201 });
+
   } catch (error) {
     console.error("Error creating todo:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
