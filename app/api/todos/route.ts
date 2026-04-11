@@ -73,11 +73,11 @@ export async function POST(request: NextRequest) {
     const parsed = TodoSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid input" }, // ✅ no detailed leak
-        { status: 400 }
-      );
-    }
+  return NextResponse.json(
+    { error: parsed.error.issues[0].message },
+    { status: 400 }
+  );
+}
 
     const data = parsed.data;
 

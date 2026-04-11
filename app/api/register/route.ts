@@ -27,11 +27,11 @@ export async function POST(request: Request) {
     const parsed = RegisterSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid input" },
-        { status: 400 }
-      );
-    }
+  return NextResponse.json(
+    { error: parsed.error.issues[0].message },
+    { status: 400 }
+  );
+}
 
     const { name, email, password } = parsed.data;
 
