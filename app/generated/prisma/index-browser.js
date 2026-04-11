@@ -166,6 +166,14 @@ exports.Prisma.TimerSessionScalarFieldEnum = {
   todoId: 'todoId'
 };
 
+exports.Prisma.PasswordResetTokenScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -196,7 +204,8 @@ exports.Prisma.ModelName = {
   User: 'User',
   Todo: 'Todo',
   Suggestion: 'Suggestion',
-  TimerSession: 'TimerSession'
+  TimerSession: 'TimerSession',
+  PasswordResetToken: 'PasswordResetToken'
 };
 
 /**
