@@ -1,46 +1,83 @@
-import { NextResponse } from "next/server"
-import bcrypt from "bcryptjs"
-import prisma from "@/lib/prisma"
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import prisma from "@/lib/prisma";
+import { z } from "zod";
+
+// ✅ Validation schema
+const RegisterSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json()
+    let body;
 
-    if (!email || !password) {
-      return NextResponse.json({ message: "Email and password are required" }, { status: 400 })
+    // ✅ Safe JSON parsing
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request" },
+        { status: 400 }
+      );
     }
 
-    // Check if user already exists
+    const parsed = RegisterSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input" },
+        { status: 400 }
+      );
+    }
+
+    const { name, email, password } = parsed.data;
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
-    })
+      where: { email: normalizedEmail },
+    });
 
     if (existingUser) {
-      return NextResponse.json({ message: "User with this email already exists" }, { status: 409 })
+      // ⚠️ For register it's okay to say exists (unlike forgot-password)
+      return NextResponse.json(
+        { error: "User already exists" },
+        { status: 409 }
+      );
     }
 
-    // Hash the password before storing it
-    const hashedPassword = await bcrypt.hash(password, 10)
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the user in your database using your Prisma User model
     const newUser = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         name: name || null,
       },
-    })
+    });
 
-    // Return a subset of user data, excluding sensitive information like password
     return NextResponse.json(
       {
         message: "User registered successfully",
-        user: { id: newUser.id, email: newUser.email, name: newUser.name },
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+        },
       },
-      { status: 201 },
-    )
+      { status: 201 }
+    );
   } catch (error) {
-    console.error("Registration error:", error)
-    return NextResponse.json({ message: "Something went wrong during registration" }, { status: 500 })
+    console.error("Register error:", error);
+
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
   }
 }
